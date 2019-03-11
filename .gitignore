@@ -1,0 +1,36 @@
+# compiled files
+target/
+*.class
+*.log
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# project
+out/
+project/boot/
+project/plugins/project/
+
+# sbt specific
+.cache
+.history
+.lib/
+dist/*
+lib_managed/
+src_managed/
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+.idea
+.idea_modules/
+
+# macosx
+.DS_Store
+
+# other
+atlassian-ide-plugin.xml
