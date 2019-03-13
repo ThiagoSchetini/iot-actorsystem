@@ -6,7 +6,6 @@ import akka.actor.PoisonPill;
 import akka.testkit.javadsl.TestKit;
 import org.junit.*;
 
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
