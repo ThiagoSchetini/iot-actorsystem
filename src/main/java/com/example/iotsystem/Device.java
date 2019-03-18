@@ -7,10 +7,6 @@ import akka.event.LoggingAdapter;
 
 import java.util.Optional;
 
-import com.example.iotsystem.DeviceManager.RequestTrackDevice;
-import com.example.iotsystem.DeviceManager.DeviceRegistered;
-
-
 
 public class Device extends AbstractActor {
 
@@ -42,7 +38,6 @@ public class Device extends AbstractActor {
 
     public static final class TemperatureRecorded {
         final long requestId;
-
         public TemperatureRecorded(long requestId) {
             this.requestId = requestId;
         }
@@ -50,7 +45,6 @@ public class Device extends AbstractActor {
 
     public static final class ReadTemperature {
         final long requestId;
-
         public ReadTemperature(long requestId) {
             this.requestId = requestId;
         }
@@ -80,9 +74,9 @@ public class Device extends AbstractActor {
     public Receive createReceive() {
         return receiveBuilder()
 
-                .match(RequestTrackDevice.class, r -> {
+                .match(DeviceManager.RequestTrackDevice.class, r -> {
                     if (this.groupId.equals(r.groupId) && this.deviceId.equals(r.deviceId)) {
-                        getSender().tell(new DeviceRegistered(), getSelf());
+                        getSender().tell(new DeviceManager.DeviceRegistered(), getSelf());
                     } else {
                         log.warning(
                             "Ignoring TrackDevice request for {}-{}. This actor is responsible for {}-{}.",
