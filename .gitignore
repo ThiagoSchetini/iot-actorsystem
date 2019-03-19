@@ -1,7 +1,5 @@
-# compiled files
-target/
+# general
 *.class
-*.log
 *.jar
 *.war
 *.nar
@@ -10,27 +8,41 @@ target/
 *.tar.gz
 *.rar
 
-# project
-out/
+# sbt
+target/
+build/
 project/boot/
 project/plugins/project/
-
-# sbt specific
-.cache
-.history
+project/project/
+project/target/
 .lib/
 dist/*
 lib_managed/
 src_managed/
+out/
 
-# Scala-IDE specific
+# InteliJ
 .scala_dependencies
 .worksheet
 .idea
 .idea_modules/
+*.log
+*.iml
+*.ipr
+*.iws
 
-# macosx
+# eclipse
+build
+.classpath
+.project
+.settings
+.worksheet
+
+# mac
 .DS_Store
 
 # other
-atlassian-ide-plugin.xml
+.history
+.scala_dependencies
+.cache
+.cache-main
