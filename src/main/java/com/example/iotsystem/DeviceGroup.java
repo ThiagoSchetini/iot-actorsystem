@@ -43,6 +43,22 @@ public class DeviceGroup extends AbstractActor {
         }
     }
 
+    public static class RequestMyId {
+        final long requestId;
+        public RequestMyId(long requestId) {
+            this.requestId = requestId;
+        }
+    }
+
+    public static class ReplyMyId {
+        final long requestId;
+        final String myId;
+        public ReplyMyId(long requestId, String myId) {
+            this.requestId = requestId;
+            this.myId = myId;
+        }
+    }
+
     private void onTrackDevice(DeviceManager.RequestTrackDevice msg) {
         if (msg.groupId.equals(this.groupId)) {
             ActorRef act = deviceIdToActor.get(msg.deviceId);
@@ -68,16 +84,20 @@ public class DeviceGroup extends AbstractActor {
         }
     }
 
+    private void onDeviceList(RequestDeviceList r) {
+        getSender().tell(new ReplyDeviceList(r.requestId, deviceIdToActor.keySet()), getSelf());
+    }
+
+    private void onRequestId(RequestMyId r) {
+        getSender().tell(new ReplyMyId(r.requestId, this.groupId), getSelf());
+    }
+
     private void onTerminated(Terminated t) {
         ActorRef act = t.getActor();
         String id = actorToDeviceId.get(act);
         actorToDeviceId.remove(act);
         deviceIdToActor.remove(id);
         log.info("the device actor for {} has been terminated", id);
-    }
-
-    private void onDeviceList(RequestDeviceList r) {
-        getSender().tell(new ReplyDeviceList(r.requestId, deviceIdToActor.keySet()), getSelf());
     }
 
     @Override

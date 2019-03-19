@@ -5,6 +5,8 @@ import akka.actor.ActorSystem;
 import akka.testkit.javadsl.TestKit;
 import org.junit.*;
 
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -48,30 +50,17 @@ public class ManagerTest {
     }
 
     @Test
-    public void receiveSameDeviceIdForDifferentGroup() {
-        TestKit probe = new TestKit(system);
-        ActorRef act = system.actorOf(DeviceManager.props());
-
-        act.tell(new DeviceManager.RequestTrackDevice("group1", "device"), probe.getRef());
-        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
-        ActorRef deviceX = probe.getLastSender();
-
-        act.tell(new DeviceManager.RequestTrackDevice("group2", "device"), probe.getRef());
-        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
-        ActorRef deviceY = probe.getLastSender();
-
-        assertNotEquals(deviceX, deviceY);
-    }
-
-
-    @Test
     public void listGroups() {
         TestKit probe = new TestKit(system);
         ActorRef act = system.actorOf(DeviceManager.props());
 
         act.tell(new DeviceManager.RequestTrackDevice("group1", "device"), probe.getRef());
+        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
         act.tell(new DeviceManager.RequestTrackDevice("group2", "device"), probe.getRef());
+        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
         act.tell(new DeviceManager.RequestTrackDevice("group3", "device"), probe.getRef());
+        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
+
         act.tell(new DeviceManager.RequestGroupList(0L), probe.getRef());
         DeviceManager.ReplyGroupList reply = probe.expectMsgClass(DeviceManager.ReplyGroupList.class);
         assertEquals(reply.requestId, 0L);
@@ -84,12 +73,18 @@ public class ManagerTest {
         ActorRef act = system.actorOf(DeviceManager.props());
 
         act.tell(new DeviceManager.RequestTrackDevice("group1", "device"), probe.getRef());
+        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
         act.tell(new DeviceManager.RequestTrackDevice("group2", "device"), probe.getRef());
-        act.tell(new DeviceManager.RequestGroupList(0L), probe.getRef());
-        DeviceManager.ReplyGroupList reply = probe.expectMsgClass(DeviceManager.ReplyGroupList.class);
+        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
+
+        act.tell(new DeviceManager.RequestGroupActorList(0L), probe.getRef());
+        DeviceManager.ReplyGroupActorList reply = probe.expectMsgClass(DeviceManager.ReplyGroupActorList.class);
         assertEquals(reply.requestId, 0L);
 
-
+        // we should only have one actor remaining
+        reply.actors.forEach(a -> a.tell(new DeviceGroup.RequestMyId(0L), probe.getRef()));
+        DeviceGroup.ReplyMyId groupId = probe.expectMsgClass(DeviceGroup.ReplyMyId.class);
+        assertEquals(groupId, "group1");
 
     }
 
