@@ -51,7 +51,7 @@ public class GroupTest {
     }
 
     @Test
-    public void returnSameActorForSameDeviceId() {
+    public void receiveSameActorForSameDeviceId() {
         TestKit probe = new TestKit(system);
         ActorRef groupActor = system.actorOf(DeviceGroup.props("group"));
 
