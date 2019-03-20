@@ -33,18 +33,18 @@ public class DeviceManager extends AbstractActor {
 
     public static final class DeviceRegistered {}
 
-    public static final class RequestGroupList {
+    public static final class RequestGroupIdList {
         final long requestId;
-        public RequestGroupList(long requestId) {
+        public RequestGroupIdList(long requestId) {
             this.requestId = requestId;
         }
     }
 
-    public static final class ReplyGroupList {
+    public static final class ReplyGroupIdList {
         final long requestId;
         final Set<String> ids;
 
-        public ReplyGroupList(long requestId, Set<String> ids) {
+        public ReplyGroupIdList(long requestId, Set<String> ids) {
             this.requestId = requestId;
             this.ids = ids;
         }
@@ -82,8 +82,8 @@ public class DeviceManager extends AbstractActor {
         }
     }
 
-    private void onGroupList(RequestGroupList r) {
-        getSender().tell(new ReplyGroupList(r.requestId, this.groupIdToActor.keySet()), getSelf());
+    private void onGroupIdList(RequestGroupIdList r) {
+        getSender().tell(new ReplyGroupIdList(r.requestId, this.groupIdToActor.keySet()), getSelf());
     }
 
     private void onGroupActorList(RequestGroupActorList r) {
@@ -112,7 +112,7 @@ public class DeviceManager extends AbstractActor {
     public Receive createReceive() {
         return receiveBuilder()
                 .match(RequestTrackDevice.class, this::onTrackDevice)
-                .match(RequestGroupList.class, this::onGroupList)
+                .match(RequestGroupIdList.class, this::onGroupIdList)
                 .match(RequestGroupActorList.class, this::onGroupActorList)
                 .match(Terminated.class, this::onTerminated)
                 .build();

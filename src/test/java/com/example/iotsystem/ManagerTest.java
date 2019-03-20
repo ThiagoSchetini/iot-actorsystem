@@ -2,11 +2,10 @@ package com.example.iotsystem;
 
 import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.PoisonPill;
 import akka.testkit.javadsl.TestKit;
 import org.junit.*;
 
-import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -43,8 +42,8 @@ public class ManagerTest {
 
         assertNotEquals(deviceX, deviceY);
 
-        act.tell(new DeviceManager.RequestGroupList(0L), probe.getRef());
-        DeviceManager.ReplyGroupList reply = probe.expectMsgClass(DeviceManager.ReplyGroupList.class);
+        act.tell(new DeviceManager.RequestGroupIdList(0L), probe.getRef());
+        DeviceManager.ReplyGroupIdList reply = probe.expectMsgClass(DeviceManager.ReplyGroupIdList.class);
         assertEquals(0L, reply.requestId);
         assertEquals(Stream.of("group1", "group2").collect(Collectors.toSet()), reply.ids);
     }
@@ -61,8 +60,8 @@ public class ManagerTest {
         act.tell(new DeviceManager.RequestTrackDevice("group3", "device"), probe.getRef());
         probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
 
-        act.tell(new DeviceManager.RequestGroupList(0L), probe.getRef());
-        DeviceManager.ReplyGroupList reply = probe.expectMsgClass(DeviceManager.ReplyGroupList.class);
+        act.tell(new DeviceManager.RequestGroupIdList(0L), probe.getRef());
+        DeviceManager.ReplyGroupIdList reply = probe.expectMsgClass(DeviceManager.ReplyGroupIdList.class);
         assertEquals(0L, reply.requestId);
         assertEquals(Stream.of("group1", "group2", "group3").collect(Collectors.toSet()), reply.ids);
     }
@@ -80,17 +79,19 @@ public class ManagerTest {
         act.tell(new DeviceManager.RequestGroupActorList(0L), probe.getRef());
         DeviceManager.ReplyGroupActorList reply = probe.expectMsgClass(DeviceManager.ReplyGroupActorList.class);
         assertEquals(0L, reply.requestId);
+        assertEquals(2, reply.actors.size());
 
-        ActorRef groupActor = reply.actors.iterator().next();
-        groupActor.tell(new DeviceGroup.RequestMyId(0L), probe.getRef());
-        String id = probe.expectMsgClass(DeviceGroup.ReplyMyId.class).myId;
-        // order actors by id then remove the second
+        ActorRef toShutdown = reply.actors.stream().findAny().get();
+        probe.watch(toShutdown);
+        toShutdown.tell(PoisonPill.getInstance(), probe.getRef());
+        probe.expectTerminated(toShutdown);
 
-        // we should only have one actor remaining
-        //reply.actors.forEach(a -> a.tell(new DeviceGroup.RequestMyId(0L), probe.getRef()));
-        //DeviceGroup.ReplyMyId reply2 = probe.expectMsgClass(DeviceGroup.ReplyMyId.class);
-        assertEquals("group1", id);
-
+        probe.awaitAssert(() -> {
+            act.tell(new DeviceManager.RequestGroupActorList(1L), probe.getRef());
+            DeviceManager.ReplyGroupActorList reply2 = probe.expectMsgClass(DeviceManager.ReplyGroupActorList.class);
+            assertEquals(1, reply2.actors.size());
+            return null;
+        });
     }
 
 
