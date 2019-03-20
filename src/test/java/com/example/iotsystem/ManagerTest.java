@@ -84,7 +84,7 @@ public class ManagerTest {
         ActorRef groupActor = reply.actors.iterator().next();
         groupActor.tell(new DeviceGroup.RequestMyId(0L), probe.getRef());
         String id = probe.expectMsgClass(DeviceGroup.ReplyMyId.class).myId;
-
+        // order actors by id then remove the second
 
         // we should only have one actor remaining
         //reply.actors.forEach(a -> a.tell(new DeviceGroup.RequestMyId(0L), probe.getRef()));
