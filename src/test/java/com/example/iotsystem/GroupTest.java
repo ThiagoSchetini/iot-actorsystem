@@ -88,7 +88,7 @@ public class GroupTest {
 
         groupActor.tell(new DeviceGroup.RequestDeviceList(0L), probe.getRef());
         DeviceGroup.ReplyDeviceList reply = probe.expectMsgClass(DeviceGroup.ReplyDeviceList.class);
-        assertEquals(reply.requestId, 0L);
+        assertEquals(0L, reply.requestId);
         assertEquals(Stream.of("device1", "device2").collect(Collectors.toSet()), reply.ids);
     }
 

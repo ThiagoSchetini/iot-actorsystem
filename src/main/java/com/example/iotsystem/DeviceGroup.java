@@ -115,6 +115,7 @@ public class DeviceGroup extends AbstractActor {
         return receiveBuilder()
                 .match(DeviceManager.RequestTrackDevice.class, this::onTrackDevice)
                 .match(RequestDeviceList.class, this::onDeviceList)
+                .match(RequestMyId.class, this::onRequestId)
                 .match(Terminated.class, this::onTerminated)
                 .build();
     }

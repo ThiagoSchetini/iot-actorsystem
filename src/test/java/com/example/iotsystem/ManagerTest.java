@@ -45,7 +45,7 @@ public class ManagerTest {
 
         act.tell(new DeviceManager.RequestGroupList(0L), probe.getRef());
         DeviceManager.ReplyGroupList reply = probe.expectMsgClass(DeviceManager.ReplyGroupList.class);
-        assertEquals(reply.requestId, 0L);
+        assertEquals(0L, reply.requestId);
         assertEquals(Stream.of("group1", "group2").collect(Collectors.toSet()), reply.ids);
     }
 
@@ -63,7 +63,7 @@ public class ManagerTest {
 
         act.tell(new DeviceManager.RequestGroupList(0L), probe.getRef());
         DeviceManager.ReplyGroupList reply = probe.expectMsgClass(DeviceManager.ReplyGroupList.class);
-        assertEquals(reply.requestId, 0L);
+        assertEquals(0L, reply.requestId);
         assertEquals(Stream.of("group1", "group2", "group3").collect(Collectors.toSet()), reply.ids);
     }
 
@@ -79,15 +79,19 @@ public class ManagerTest {
 
         act.tell(new DeviceManager.RequestGroupActorList(0L), probe.getRef());
         DeviceManager.ReplyGroupActorList reply = probe.expectMsgClass(DeviceManager.ReplyGroupActorList.class);
-        assertEquals(reply.requestId, 0L);
+        assertEquals(0L, reply.requestId);
+
+        ActorRef groupActor = reply.actors.iterator().next();
+        groupActor.tell(new DeviceGroup.RequestMyId(0L), probe.getRef());
+        String id = probe.expectMsgClass(DeviceGroup.ReplyMyId.class).myId;
+
 
         // we should only have one actor remaining
-        reply.actors.forEach(a -> a.tell(new DeviceGroup.RequestMyId(0L), probe.getRef()));
-        DeviceGroup.ReplyMyId groupId = probe.expectMsgClass(DeviceGroup.ReplyMyId.class);
-        assertEquals(groupId, "group1");
+        //reply.actors.forEach(a -> a.tell(new DeviceGroup.RequestMyId(0L), probe.getRef()));
+        //DeviceGroup.ReplyMyId reply2 = probe.expectMsgClass(DeviceGroup.ReplyMyId.class);
+        assertEquals("group1", id);
 
     }
-
 
 
 }
