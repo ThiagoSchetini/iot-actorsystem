@@ -59,6 +59,62 @@ public class DeviceGroup extends AbstractActor {
         }
     }
 
+    public static class RequestAllTemperatures {
+        final long requestId;
+        public RequestAllTemperatures(long requestId) {
+            this.requestId = requestId;
+        }
+    }
+
+    public static class ReplyAllTemperatures {
+        final long requestId;
+        final Map<String, TemperatureReading> temperatures;
+        public ReplyAllTemperatures(long requestId, Map<String, TemperatureReading> temperatures) {
+            this.requestId = requestId;
+            this.temperatures = temperatures;
+        }
+    }
+
+    public static interface TemperatureReading {}
+
+    public static final class Temperature implements TemperatureReading {
+        public final double value;
+
+        public Temperature(double value) {
+            this.value = value;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if(this == o) return true;
+            if(o == null || getClass() != o.getClass()) return false;
+            return Double.compare(((Temperature) o).value, value) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            long l = Double.doubleToLongBits(value);
+            return (int) (l ^ (l >>> 32));
+        }
+
+        @Override
+        public String toString() {
+            return "Temperature{value=" + value + "}";
+        }
+    }
+
+    public enum TemperatureNotAvailable implements TemperatureReading {
+        INSTANCE
+    }
+
+    public enum  DeviceNotAvailable implements TemperatureReading {
+        INSTANCE
+    }
+
+    public enum DeviceTimeout implements TemperatureReading {
+        INSTANCE
+    }
+
     private void onTrackDevice(DeviceManager.RequestTrackDevice msg) {
         if (msg.groupId.equals(this.groupId)) {
             ActorRef act = deviceIdToActor.get(msg.deviceId);
