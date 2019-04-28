@@ -81,6 +81,7 @@ public class ManagerTest {
         assertEquals(0L, reply.requestId);
         assertEquals(2, reply.actors.size());
 
+        // there is only one possible actor at this moment
         ActorRef toShutdown = reply.actors.stream().findAny().get();
         probe.watch(toShutdown);
         toShutdown.tell(PoisonPill.getInstance(), probe.getRef());

@@ -75,7 +75,7 @@ public class DeviceGroup extends AbstractActor {
         }
     }
 
-    public static interface TemperatureReading {}
+    public interface TemperatureReading {}
 
     public static final class Temperature implements TemperatureReading {
         public final double value;
@@ -107,7 +107,7 @@ public class DeviceGroup extends AbstractActor {
         INSTANCE
     }
 
-    public enum  DeviceNotAvailable implements TemperatureReading {
+    public enum DeviceNotAvailable implements TemperatureReading {
         INSTANCE
     }
 
