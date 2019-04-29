@@ -63,4 +63,35 @@ public class QueryTest {
         assertEquals(expectedTemperatures, reply.temperatures);
     }
 
+    @Test
+    public void returnTemperatureNotAvailableForDevicesNoReading() {
+
+        // *remember, they are like placebo actors
+        TestKit requester = new TestKit(system);
+        TestKit device1 = new TestKit(system);
+        TestKit device2 = new TestKit(system);
+
+        HashMap<ActorRef, String> actorToDeviceId = new HashMap<>();
+        actorToDeviceId.put(device1.getRef(), "device1");
+        actorToDeviceId.put(device2.getRef(), "device2");
+
+        ActorRef queryActor = system.actorOf(
+                DeviceGroupQuery.props(
+                        actorToDeviceId, 1L, requester.getRef(), new FiniteDuration(3, TimeUnit.SECONDS)));
+
+        assertEquals(0L, device1.expectMsgClass(Device.ReadTemperature.class).requestId);
+        assertEquals(0L, device2.expectMsgClass(Device.ReadTemperature.class).requestId);
+
+        queryActor.tell(new Device.RespondTemperature(0L, Optional.empty()), device1.getRef());
+        queryActor.tell(new Device.RespondTemperature(0L, Optional.of(2d)), device2.getRef());
+
+        DeviceGroup.ReplyAllTemperatures reply = requester.expectMsgClass(DeviceGroup.ReplyAllTemperatures.class);
+        assertEquals(1L, reply.requestId);
+
+        HashMap<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
+        expectedTemperatures.put("device1", DeviceGroup.TemperatureNotAvailable.INSTANCE);
+        expectedTemperatures.put("device2", new DeviceGroup.Temperature(2d));
+        assertEquals(expectedTemperatures, reply.temperatures);
+    }
+
 }
