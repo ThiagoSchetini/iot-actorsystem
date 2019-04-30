@@ -13,7 +13,6 @@ import java.util.Set;
 
 public class DeviceGroupQuery extends AbstractActor {
 
-    private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
     final long requestID;
     final ActorRef requester;
     final Map<ActorRef, String> actorToDeviceId;
@@ -123,10 +122,10 @@ public class DeviceGroupQuery extends AbstractActor {
             getContext().stop(getSelf());
         } else {
 
-            /**
-             * Hot swapping: the returned Receive object is changed
-             * on the next device reply message, the new replies and waiting structures will be used
-             */
+            //
+            //Hot swapping: the returned Receive object is changed
+            //on the next device reply message, the new replies and waiting structures will be used
+            //
             getContext().become(waitingForReplies(newRepliesSoFar, newStillWaiting));
         }
     }
