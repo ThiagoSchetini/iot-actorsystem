@@ -68,17 +68,17 @@ public class DeviceManager extends AbstractActor {
     }
 
     private void onTrackDevice(RequestTrackDevice msg) {
-        ActorRef act = groupIdToActor.get(msg.groupId);
+        ActorRef groupActor = groupIdToActor.get(msg.groupId);
 
-        if(act != null) {
-            act.forward(msg, getContext());
+        if(groupActor != null) {
+            groupActor.forward(msg, getContext());
 
         } else {
-            act = getContext().actorOf(DeviceGroup.props(msg.groupId), "group-" + msg.groupId);
-            groupIdToActor.put(msg.groupId, act);
-            actorToGroupId.put(act, msg.groupId);
-            getContext().watch(act);
-            act.forward(msg, getContext());
+            groupActor = getContext().actorOf(DeviceGroup.props(msg.groupId), "group-" + msg.groupId);
+            groupIdToActor.put(msg.groupId, groupActor);
+            actorToGroupId.put(groupActor, msg.groupId);
+            getContext().watch(groupActor);
+            groupActor.forward(msg, getContext());
         }
     }
 

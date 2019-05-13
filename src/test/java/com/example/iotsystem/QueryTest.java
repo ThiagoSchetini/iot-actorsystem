@@ -7,12 +7,13 @@ import akka.testkit.javadsl.TestKit;
 import org.junit.*;
 import scala.concurrent.duration.FiniteDuration;
 
+import java.time.Duration;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 
 public class QueryTest {
 
@@ -28,12 +29,13 @@ public class QueryTest {
 
         //
         // this objects acts like a placebo
+        // the requester is like a dummy to receive the replies that we need to test
         //
         TestKit requester = new TestKit(system);
         TestKit device1 = new TestKit(system);
         TestKit device2 = new TestKit(system);
 
-        HashMap<ActorRef, String> actorToDeviceId = new HashMap<>();
+        Map<ActorRef, String> actorToDeviceId = new HashMap<>();
         actorToDeviceId.put(device1.getRef(), "device1");
         actorToDeviceId.put(device2.getRef(), "device2");
 
@@ -43,7 +45,7 @@ public class QueryTest {
         //
         ActorRef queryActor = system.actorOf(
                 DeviceGroupQuery.props(
-                        actorToDeviceId, 1L, requester.getRef(), new FiniteDuration(3, TimeUnit.SECONDS)));
+                        actorToDeviceId, 1L, requester.getRef(), new FiniteDuration(1, TimeUnit.SECONDS)));
 
         assertEquals(0L, device1.expectMsgClass(Device.ReadTemperature.class).requestId);
         assertEquals(0L, device2.expectMsgClass(Device.ReadTemperature.class).requestId);
@@ -57,7 +59,7 @@ public class QueryTest {
         DeviceGroup.ReplyAllTemperatures reply = requester.expectMsgClass(DeviceGroup.ReplyAllTemperatures.class);
         assertEquals(1L, reply.requestId);
 
-        HashMap<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
+        Map<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
         expectedTemperatures.put("device1", new DeviceGroup.Temperature(1d));
         expectedTemperatures.put("device2", new DeviceGroup.Temperature(2d));
         assertEquals(expectedTemperatures, reply.temperatures);
@@ -73,13 +75,13 @@ public class QueryTest {
         TestKit device1 = new TestKit(system);
         TestKit device2 = new TestKit(system);
 
-        HashMap<ActorRef, String> actorToDeviceId = new HashMap<>();
+        Map<ActorRef, String> actorToDeviceId = new HashMap<>();
         actorToDeviceId.put(device1.getRef(), "device1");
         actorToDeviceId.put(device2.getRef(), "device2");
 
         ActorRef queryActor = system.actorOf(
                 DeviceGroupQuery.props(
-                        actorToDeviceId, 1L, requester.getRef(), new FiniteDuration(3, TimeUnit.SECONDS)));
+                        actorToDeviceId, 1L, requester.getRef(), new FiniteDuration(1, TimeUnit.SECONDS)));
 
         assertEquals(0L, device1.expectMsgClass(Device.ReadTemperature.class).requestId);
         assertEquals(0L, device2.expectMsgClass(Device.ReadTemperature.class).requestId);
@@ -90,26 +92,25 @@ public class QueryTest {
         DeviceGroup.ReplyAllTemperatures reply = requester.expectMsgClass(DeviceGroup.ReplyAllTemperatures.class);
         assertEquals(1L, reply.requestId);
 
-        HashMap<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
+        Map<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
         expectedTemperatures.put("device1", DeviceGroup.TemperatureNotAvailable.INSTANCE);
         expectedTemperatures.put("device2", new DeviceGroup.Temperature(2d));
         assertEquals(expectedTemperatures, reply.temperatures);
     }
 
     @Test
-    public void returnDeviceNotAvailableForDeviceStopsBeforeAnwsering() {
-
+    public void returnDeviceNotAvailableForDeviceStopsBeforeAnswering() {
         TestKit requester = new TestKit(system);
         TestKit device1 = new TestKit(system);
         TestKit device2 = new TestKit(system);
 
-        HashMap<ActorRef, String> actorToDeviceId = new HashMap<>();
+        Map<ActorRef, String> actorToDeviceId = new HashMap<>();
         actorToDeviceId.put(device1.getRef(), "device1");
         actorToDeviceId.put(device2.getRef(), "device2");
 
         ActorRef queryActor = system.actorOf(
                 DeviceGroupQuery.props(
-                        actorToDeviceId, 1L, requester.getRef(), new FiniteDuration(3, TimeUnit.SECONDS)));
+                        actorToDeviceId, 1L, requester.getRef(), new FiniteDuration(1, TimeUnit.SECONDS)));
 
         assertEquals(0L, device1.expectMsgClass(Device.ReadTemperature.class).requestId);
         assertEquals(0L, device2.expectMsgClass(Device.ReadTemperature.class).requestId);
@@ -120,10 +121,70 @@ public class QueryTest {
         DeviceGroup.ReplyAllTemperatures reply = requester.expectMsgClass(DeviceGroup.ReplyAllTemperatures.class);
         assertEquals(1L, reply.requestId);
 
-        HashMap<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
+        Map<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
         expectedTemperatures.put("device1", new DeviceGroup.Temperature(1d));
         expectedTemperatures.put("device2", DeviceGroup.DeviceNotAvailable.INSTANCE);
         assertEquals(expectedTemperatures, reply.temperatures);
     }
+
+    @Test
+    public void returnDeviceTemperatureEvenAfterRespondingItStops() {
+        TestKit requester = new TestKit(system);
+        TestKit device1 = new TestKit(system);
+        TestKit device2 = new TestKit(system);
+
+        Map<ActorRef, String> actorToDeviceId = new HashMap<>();
+        actorToDeviceId.put(device1.getRef(), "device1");
+        actorToDeviceId.put(device2.getRef(), "device2");
+
+        ActorRef queryActor = system.actorOf(
+                DeviceGroupQuery.props(
+                        actorToDeviceId, 1L, requester.getRef(), new FiniteDuration(1, TimeUnit.SECONDS)));
+
+        assertEquals(0L, device1.expectMsgClass(Device.ReadTemperature.class).requestId);
+        assertEquals(0L, device2.expectMsgClass(Device.ReadTemperature.class).requestId);
+
+        queryActor.tell(new Device.RespondTemperature(0L, Optional.of(1d)), device1.getRef());
+        queryActor.tell(new Device.RespondTemperature(0L, Optional.of(2d)), device2.getRef());
+        device2.getRef().tell(PoisonPill.getInstance(), ActorRef.noSender());
+
+        DeviceGroup.ReplyAllTemperatures reply = requester.expectMsgClass(DeviceGroup.ReplyAllTemperatures.class);
+        assertEquals(1L, reply.requestId);
+
+        Map<String, DeviceGroup.Temperature> expectedTemperatures = new HashMap<>();
+        expectedTemperatures.put("device1", new DeviceGroup.Temperature(1d));
+        expectedTemperatures.put("device2", new DeviceGroup.Temperature(2d));
+        assertEquals(expectedTemperatures, reply.temperatures);
+    }
+
+    @Test
+    public void returnDeviceTimeoutIfDeviceNotReturnInTime() {
+        TestKit requester = new TestKit(system);
+        TestKit device1 = new TestKit(system);
+        TestKit device2 = new TestKit(system);
+
+        Map<ActorRef, String> deviceToActorId = new HashMap<>();
+        deviceToActorId.put(device1.getRef(), "device1");
+        deviceToActorId.put(device2.getRef(), "device2");
+
+        ActorRef queryActor = system.actorOf(
+                DeviceGroupQuery.props(
+                        deviceToActorId, 1L, requester.getRef(), new FiniteDuration(1, TimeUnit.SECONDS)));
+
+        assertEquals(0L, device1.expectMsgClass(Device.ReadTemperature.class).requestId);
+        assertEquals(0L, device2.expectMsgClass(Device.ReadTemperature.class).requestId);
+
+        queryActor.tell(new Device.RespondTemperature(0L, Optional.of(1d)), device1.getRef());
+
+        DeviceGroup.ReplyAllTemperatures reply = requester.expectMsgClass(
+                Duration.ofSeconds(5), DeviceGroup.ReplyAllTemperatures.class);
+        assertEquals(1L, reply.requestId);
+
+        Map<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
+        expectedTemperatures.put("device1", new DeviceGroup.Temperature(1d));
+        expectedTemperatures.put("device2", DeviceGroup.DeviceTimedOut.INSTANCE);
+        assertEquals(expectedTemperatures, reply.temperatures);
+    }
+
 
 }

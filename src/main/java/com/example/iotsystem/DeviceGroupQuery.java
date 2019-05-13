@@ -1,8 +1,6 @@
 package com.example.iotsystem;
 
 import akka.actor.*;
-import akka.event.Logging;
-import akka.event.LoggingAdapter;
 import scala.concurrent.duration.FiniteDuration;
 
 import java.util.HashMap;
@@ -81,21 +79,19 @@ public class DeviceGroupQuery extends AbstractActor {
 
         return receiveBuilder()
                 .match(Device.RespondTemperature.class, r -> {
-                    //ActorRef deviceActor = getSender();
-
                     DeviceGroup.TemperatureReading reading = r.value
                             .map(v -> (DeviceGroup.TemperatureReading) new DeviceGroup.Temperature(v))
                             .orElse(DeviceGroup.TemperatureNotAvailable.INSTANCE);
 
-                    //receivedResponse(deviceActor, reading, stillWaiting, repliesSoFar);
                     receivedResponse(getSender(), reading, stillWaiting, repliesSoFar);
 
                 }).match(Terminated.class, r -> {
                     receivedResponse(getSender(), DeviceGroup.DeviceNotAvailable.INSTANCE, stillWaiting, repliesSoFar);
 
                 }).match(CollectionTimeout.class, r -> {
-                    final HashMap<String, DeviceGroup.TemperatureReading> replies = new HashMap<>(repliesSoFar);
-                    actorToDeviceId.forEach((k,v) -> replies.put(actorToDeviceId.get(k), DeviceGroup.DeviceTimeout.INSTANCE));
+                    Map<String, DeviceGroup.TemperatureReading> replies = new HashMap<>(repliesSoFar);
+                    stillWaiting.stream().forEach(
+                            a -> replies.put(actorToDeviceId.get(a), DeviceGroup.DeviceTimedOut.INSTANCE));
 
                     requester.tell(new DeviceGroup.ReplyAllTemperatures(requestID, replies), getSelf());
                     getContext().stop(getSelf());
@@ -108,7 +104,12 @@ public class DeviceGroupQuery extends AbstractActor {
                                   Set<ActorRef> stillWaiting,
                                   HashMap<String, DeviceGroup.TemperatureReading> repliesSoFar) {
 
+        //
+        // even after responding a temperature, this device can send a Terminated.class message
+        // so, to preserve the last reply we will not watch it anymore (because it would update the HashMap
+        //
         getContext().unwatch(deviceActor);
+
         String deviceId = actorToDeviceId.get(deviceActor);
 
         HashSet<ActorRef> newStillWaiting = new HashSet<>(stillWaiting);

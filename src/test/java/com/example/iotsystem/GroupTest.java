@@ -6,6 +6,7 @@ import akka.actor.PoisonPill;
 import akka.testkit.javadsl.TestKit;
 import org.junit.*;
 
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -116,6 +117,41 @@ public class GroupTest {
             assertEquals(Stream.of(("device2")).collect(Collectors.toSet()), reply.ids);
             return null;
         });
+    }
+
+    @Test
+    public void collectTemperaturesFromAllActiveDevices() {
+        TestKit probe = new TestKit(system);
+        ActorRef groupActor = system.actorOf(DeviceGroup.props("group"));
+
+        groupActor.tell(new DeviceManager.RequestTrackDevice("group", "device1"), probe.getRef());
+        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
+        ActorRef device1 = probe.getLastSender();
+
+        groupActor.tell(new DeviceManager.RequestTrackDevice("group", "device2"), probe.getRef());
+        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
+        ActorRef device2 = probe.getLastSender();
+
+        groupActor.tell(new DeviceManager.RequestTrackDevice("group", "device3"), probe.getRef());
+        probe.expectMsgClass(DeviceManager.DeviceRegistered.class);
+        ActorRef device3 = probe.getLastSender();
+
+        // check that the device actors are working
+        device1.tell(new Device.RecordTemperature(0L, 1d), probe.getRef());
+        assertEquals(0L, probe.expectMsgClass(Device.TemperatureRecorded.class).requestId);
+        device2.tell(new Device.RecordTemperature(1L, 2d), probe.getRef());
+        assertEquals(1L, probe.expectMsgClass(Device.TemperatureRecorded.class).requestId);
+        // no temperature for device 3
+
+        groupActor.tell(new DeviceGroup.RequestAllTemperatures(0L), probe.getRef());
+        DeviceGroup.ReplyAllTemperatures reply = probe.expectMsgClass(DeviceGroup.ReplyAllTemperatures.class);
+        assertEquals(0L, reply.requestId);
+
+        HashMap<String, DeviceGroup.TemperatureReading> expectedTemperatures = new HashMap<>();
+        expectedTemperatures.put("device1", new DeviceGroup.Temperature(1d));
+        expectedTemperatures.put("device2", new DeviceGroup.Temperature(2d));
+        expectedTemperatures.put("device3", DeviceGroup.TemperatureNotAvailable.INSTANCE);
+        assertEquals(expectedTemperatures, reply.temperatures);
     }
 
 }

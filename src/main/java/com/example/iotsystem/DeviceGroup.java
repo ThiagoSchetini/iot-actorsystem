@@ -6,10 +6,12 @@ import akka.actor.Props;
 import akka.actor.Terminated;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
+import scala.concurrent.duration.FiniteDuration;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class DeviceGroup extends AbstractActor {
 
@@ -26,14 +28,14 @@ public class DeviceGroup extends AbstractActor {
         return Props.create(DeviceGroup.class, () -> new DeviceGroup(groupId));
     }
 
-    public static class RequestDeviceList {
+    public static final class RequestDeviceList {
         final long requestId;
         public RequestDeviceList(long requestId) {
             this.requestId = requestId;
         }
     }
 
-    public static class ReplyDeviceList {
+    public static final class ReplyDeviceList {
         final long requestId;
         final Set<String> ids;
 
@@ -43,14 +45,14 @@ public class DeviceGroup extends AbstractActor {
         }
     }
 
-    public static class RequestMyId {
+    public static final class RequestMyId {
         final long requestId;
         public RequestMyId(long requestId) {
             this.requestId = requestId;
         }
     }
 
-    public static class ReplyMyId {
+    public static final class ReplyMyId {
         final long requestId;
         final String myId;
         public ReplyMyId(long requestId, String myId) {
@@ -59,14 +61,15 @@ public class DeviceGroup extends AbstractActor {
         }
     }
 
-    public static class RequestAllTemperatures {
+    public static final class RequestAllTemperatures {
         final long requestId;
+
         public RequestAllTemperatures(long requestId) {
             this.requestId = requestId;
         }
     }
 
-    public static class ReplyAllTemperatures {
+    public static final class ReplyAllTemperatures {
         final long requestId;
         final Map<String, TemperatureReading> temperatures;
         public ReplyAllTemperatures(long requestId, Map<String, TemperatureReading> temperatures) {
@@ -111,8 +114,31 @@ public class DeviceGroup extends AbstractActor {
         INSTANCE
     }
 
-    public enum DeviceTimeout implements TemperatureReading {
+    public enum DeviceTimedOut implements TemperatureReading {
         INSTANCE
+    }
+
+    @Override
+    public void preStart() {
+        log.info("Device group {} started", groupId);
+    }
+
+    @Override
+    public void postStop() {
+        log.info("Device group {} stopped", groupId);
+    }
+
+    private void onAllTemperatures(RequestAllTemperatures r) {
+
+        //
+        // Java collections are mutable, so we create a new one
+        // since it's not safe many threads (actors) modifying the same structure
+        //
+        getContext().actorOf(DeviceGroupQuery.props(
+                        new HashMap<>(this.actorToDeviceId), // -> the new one
+                        r.requestId,
+                        getSender(),
+                        new FiniteDuration(3, TimeUnit.SECONDS)));
     }
 
     private void onTrackDevice(DeviceManager.RequestTrackDevice msg) {
@@ -157,21 +183,12 @@ public class DeviceGroup extends AbstractActor {
     }
 
     @Override
-    public void preStart() {
-        log.info("Device group {} started", groupId);
-    }
-
-    @Override
-    public void postStop() {
-        log.info("Device group {} stopped", groupId);
-    }
-
-    @Override
     public Receive createReceive() {
         return receiveBuilder()
                 .match(DeviceManager.RequestTrackDevice.class, this::onTrackDevice)
                 .match(RequestDeviceList.class, this::onDeviceList)
                 .match(RequestMyId.class, this::onRequestId)
+                .match(RequestAllTemperatures.class, this::onAllTemperatures)
                 .match(Terminated.class, this::onTerminated)
                 .build();
     }
